@@ -2,6 +2,7 @@ import http from "http";
 import { Command } from "commander";
 import fs from "fs";
 import path from "path";
+import superagent from "superagent";
 
 const { readFile, writeFile, unlink } = fs.promises;
 
@@ -31,9 +32,17 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET") {
     try {
-      const data = await readFile(filePath);  
+      const cached = await readFile(filePath);          
       res.writeHead(200, { "Content-Type": "image/jpeg" });
-      return res.end(data);
+      return res.end(cached);
+    } catch {}
+
+    try {
+      const response = await superagent.get(`https://http.cat/${code}`);
+      const img = response.body;
+      await writeFile(filePath, img);   
+      res.writeHead(200, { "Content-Type": "image/jpeg" });
+      return res.end(img);
     } catch {
       res.writeHead(404);
       return res.end("Not Found");
